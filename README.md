@@ -14,8 +14,8 @@
     - Leave the rest setting to as is for this project
 4. Set up the security inbound rules
     - Add TCP Port number 9092 for Kafka server
-    - Add all traffic with your own IP to connect the Kafka from your local machine
-    - Note: This setting is not recommended in Production level
+    - Add all traffic with your own IP to connect the Kafka from your local machine  
+    *This setting is not recommended in Production level
 5. SSH into the EC2 instance
     - Git Bash
         - Select the directory with .pem file inside
@@ -71,3 +71,70 @@
     ```bash
     $ kafka_2.13-3.4.0/bin/kafka-console-consumer.sh --topic <YOUR_TOPIC_NAME> --bootstrap-server <YOUR_EC2_INSTANCE_PUBLIC_IP>:9092
     ```
+
+## Setting up S3 Bucket, AWS Glue(Crawler), AWS Athena
+### Setup S3 Bucket
+1. Go to AWS console
+2. Go to S3 page in AWS console and click `Create bucket`
+3. Configure the S3 bucket
+    - Name of the S3 Bucket
+    - Select the region (Same as EC2 region)
+    - Leave the rest setting to as is for this project
+4. Configure AWS in your local machine to upload file from your local machine (If you don't have a user)
+    - Go to IAM page
+    - Select `Users` in the left panel
+    - Create an user first (You have to create a user first before you give programmatic access)
+        - User name
+        - Permission options  
+          AdministratorAccess from `Attach policies directly`  
+          *For this project, give Admin access to the user
+        - Review and Create
+    - Click the user you just created and go to Security credentials
+    - Go to Access Key > `Create access key`
+    - Configure Access Key
+        - Click `Command Line Interface (CLI)`
+        - (Optional) Add description of the key
+        - (Optional) Download .csv file to see Access key & Secret access key
+    - Download AWS CLI and type `aws configure` in the terminal
+        - AWS Access Key ID: <YOUR_ACCESS_KEY>
+        - AWS Secret Acess Key: <YOUR_SECRET_ACCESS_KEY>
+        - Default Region Name: <YOUR_REGION_NAME>
+        - (Optional) Default Output Format: <OUTPUT_FORMAT>
+5. Now you can access S3 bucket from your local machine  
+   ```python
+   from s3fs import S3FileSystem
+   ```
+### Setup AWS Glue with Crawler
+1. Go to AWS console
+2. Go to Crawlers (AWS Glue feature) page in AWS console and click `Create crawler`
+3. Configure the Crawler
+    - Crawler name
+    - Add data source
+        - Location of S3 data: In this account
+        - S3 path: <YOUR_S3_BUCKET_NAME>  
+          Put the slash at the end of the S3 path
+        - Leave the rest setting to as is for this project
+    - IAM Role 
+        - Go to IAM page
+        - Select `Roles` in the left panel
+        - Create a role 
+            - Trusted entity type: AWS service
+            - Use cases for other AWS services: Glue
+            - Give `AdministratorAccess` for this project
+            - Type Role name
+    - Target database (AWS Glue database)  
+      Frequency: On demand for this project
+4. Run the Crawler (Wait till the job is over)
+### Setup AWS Athena
+1. Go to AWS console
+2. Go to Athena
+3. Go to Settings > Manage 
+    - Select another AWS S3 Bucket for stroing temporary queries (Create one if you don't have extra bucket)
+4. Configure the setting
+    - Data Source: AWSDataCatalog
+    - Database: AWS Glue Database
+    - Tables: AWS S3 Bucket
+5. Run SQL query
+   ```sql
+   SELECT * FROM "YOUR_GLUE_DATABASENAME"."YOUR_AWS_S3_BUCKET_NAME"
+   ```
